@@ -7,22 +7,20 @@
     var Peek = (function(){
         var self = this;
 
-        this.calls = {};
-        this.source = {};
+        this.data = {};
 
         this.load = function(data){
 
-            self.calls = data.calls;
-            this.source = data.source;
+            self.data = data;
 
-            self.render();
+            self.render(data);
         };
 
-        this.render = function(){
+        this.render = function(data){
             var $results = $('#results');
             $results.empty();
 
-            self.renderRow($results, null, this.calls);
+            self.renderRow($results, null, data);
 
             // $results.Treeview({ speed: "fast", collapsed: true, control: "#treecontrol" });
         };
@@ -32,7 +30,7 @@
             var had_any = false;
             $.each(data, function(key, value){
                 had_any = true;
-                var label = self.source[value.f || parent.f][value.l];
+                var label = value.s;
                 if (label == '') {
                     label = '&nbsp;';
                 }

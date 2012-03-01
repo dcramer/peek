@@ -42,29 +42,27 @@ class Tracer(object):
         self.last_exc_firstlineno = 0
         self.logger = logger
 
-    def _get_function_struct(self, frame):
-        filename = frame.f_code.co_filename
+    def _get_struct(self, frame):
+        filename = inspect.getfile(frame)
         function_name = frame.f_code.co_name
         f_globals = getattr(frame, 'f_globals', {})
         module_name = f_globals.get('__name__')
         return {
-            "e": "line",
             "f": filename,
             "m": module_name,
             "fn": function_name,
             "n": 0,
             "t": 0,
             "l": frame.f_lineno,
-            "c": OrderedDict(),
-        }
-
-    def _get_line_struct(self, frame):
-        return {
-            "e": "line",
-            "n": 0,
-            "t": 0,
-            "l": frame.f_lineno,
-            "c": OrderedDict(),
+            "c": OrderedDict([
+                ("%s:%d" % (filename, n), {
+                    "s": l[:-1],
+                    "n": 0,
+                    "t": 0,
+                    "l": n,
+                    "c": OrderedDict(),
+                }) for n, l in enumerate(*inspect.getsourcelines(frame))
+            ]),
         }
 
     def _trace(self, frame, event, arg_unused):
@@ -93,12 +91,11 @@ class Tracer(object):
             # Append it to the stack
             self.data_stack.append((self.cur_file_data, cur_time))
 
-            filename = frame.f_code.co_filename
-            function_name = frame.f_code.co_name
-            key = '%s:%s:%d' % (filename, function_name, frame.f_lineno)
+            filename = inspect.getfile(frame)
+            key = '%s:%d' % (filename, frame.f_lineno)
 
             if key not in self.cur_file_data['c']:
-                self.cur_file_data['c'][key] = self._get_function_struct(frame)
+                self.cur_file_data['c'][key] = self._get_struct(frame)
 
             self.cur_file_data = self.cur_file_data['c'][key]
             self.cur_file_data['n'] += 1
@@ -110,10 +107,11 @@ class Tracer(object):
 
         elif event == 'line':
             # Record an executed line.
-            filename = frame.f_code.co_filename
-            function_name = frame.f_code.co_name
-            key = '%s:%s:%d' % (filename, function_name, frame.f_lineno)
-            self.cur_file_data['c'][key] = self._get_line_struct(frame)
+            pass
+            # filename = frame.f_code.co_filename
+            # function_name = frame.f_code.co_name
+            # key = '%s:%s:%d' % (filename, function_name, frame.f_lineno)
+            # self.cur_file_data['c'][key] = self._get_line_struct(frame)
 
         elif event == 'return':
             # Leaving this function, pop the filename stack.

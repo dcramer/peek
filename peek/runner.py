@@ -108,7 +108,7 @@ def main(argv=None):
     finally:
         collector.stop()
 
-        reporter = HTMLReporter(argv[0] + ':<module>', collector)
+        reporter = HTMLReporter(argv[0], collector)
         reporter.report()
 
 

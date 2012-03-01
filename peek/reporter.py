@@ -44,30 +44,21 @@ class HTMLReporter(Reporter):
         for key, value in data.iteritems():
             return self._get_origin(value['c'], origin)
 
-    def get_files(self, calls, files=None):
-        if files is None:
-            files = set()
-        for key, value in calls.iteritems():
-            if 'f' in value:
-                files.add(value['f'])
-            if 'c' in value:
-                self.get_files(value['c'], files)
-        return files
+    # def get_files(self, calls, files=None):
+    #     if files is None:
+    #         files = set()
+    #     for key, value in calls.iteritems():
+    #         if 'f' in value:
+    #             files.add(value['f'])
+    #         if 'c' in value:
+    #             self.get_files(value['c'], files)
+    #     return files
 
     def report(self):
         calls = self._get_origin(self.collector.get_calls(), self.origin)
-
-        files = self.get_files(calls)
-
-        source = dict((f, [f[:-1] for f in open(f, 'r')]) for f in files)
-
-        data = {
-            'calls': calls,
-            'source': source,
-        }
 
         if not os.path.exists(self.output):
             os.makedirs(self.output)
 
         with open(os.path.join(self.output, 'data.json'), 'w') as fp:
-            fp.write('Peek.load(' + json.dumps(data) + ');')
+            fp.write('Peek.load(' + json.dumps(calls) + ');')
