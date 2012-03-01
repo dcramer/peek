@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Peek Results</title>
+    <script type="text/javascript" src="jquery-1.7.1.min.js"></script>
+    <script type="text/javascript">
+    var Peek = (function(){
+        var self = this;
+
+        this.calls = {};
+        this.source = {};
+
+        this.load = function(data){
+
+            self.calls = data.calls;
+            this.source = data.source;
+
+            self.render();
+        };
+
+        this.render = function(){
+            var $results = $('#results');
+            $results.empty();
+
+            self.renderRow($results, null, this.calls);
+
+            // $results.Treeview({ speed: "fast", collapsed: true, control: "#treecontrol" });
+        };
+
+        this.renderRow = function($el, parent, data){
+            var $parent = $('<table></table>');
+            $el.append($parent);
+            $.each(data, function(key, value){
+                if (parent) {
+                    var label = (self.source[parent.filename][value.lineno - parent.lineno] || value.function);
+                } else {
+                    var label = self.source[value.filename][value.lineno];
+                }
+                var timing = ((Math.round((value.time_spent / value.num_calls) * 1000, 5) / 1000) || 0);
+                var $row = $('<tr><td>' + timing + 's</td><td>' + value.lineno + '</td><td><pre>' + label + '</pre></tr>');
+                $parent.append($row);
+
+                if (value.calls) {
+                    self.renderRow($row.find('td:last-child'), value, value.calls);
+                }
+            });
+        };
+
+        return this;
+    })();
+    </script>
+    <style type="text/css">
+    * {
+        padding: 0;
+        margin: 0;
+    }
+    li {
+        margin-left: 10px;
+    }
+    td, pre {
+        font-family: monaco, fixed;
+        font-size: 1em;
+    }
+    pre {
+        padding: 0;
+    }
+    td { vertical-align: top; }
+
+    </style>
+  </head>
+  <body>
+    <ol id="results"></ol>
+    <script type="text/javascript" src="data.json"></script>
+  </body>
+</html>

@@ -9,6 +9,9 @@ Code is inspired and originally based on ``coverage.py``.
 :license: Apache License 2.0, see LICENSE for more details.
 """
 
+__all__ = ('Tracer',)
+
+import inspect
 import sys
 import time
 from collections import OrderedDict
@@ -39,17 +42,28 @@ class Tracer(object):
         self.last_exc_firstlineno = 0
         self.logger = logger
 
-    def _get_data_struct(self, frame):
+    def _get_function_struct(self, frame):
         filename = frame.f_code.co_filename
         function_name = frame.f_code.co_name
         f_globals = getattr(frame, 'f_globals', {})
         module_name = f_globals.get('__name__')
         return {
+            "event": "line",
             "filename": filename,
             "module": module_name,
             "function": function_name,
             "num_calls": 0,
             "time_spent": 0,
+            "lineno": frame.f_lineno,
+            "calls": OrderedDict(),
+        }
+
+    def _get_line_struct(self, frame):
+        return {
+            "event": "line",
+            "num_calls": 0,
+            "time_spent": 0,
+            "lineno": frame.f_lineno,
             "calls": OrderedDict(),
         }
 
@@ -81,10 +95,10 @@ class Tracer(object):
 
             filename = frame.f_code.co_filename
             function_name = frame.f_code.co_name
-            key = '%s:%s' % (filename, function_name)
+            key = '%s:%s:%d' % (filename, function_name, frame.f_lineno)
 
             if key not in self.cur_file_data['calls']:
-                self.cur_file_data['calls'][key] = self._get_data_struct(frame)
+                self.cur_file_data['calls'][key] = self._get_function_struct(frame)
 
             self.cur_file_data = self.cur_file_data['calls'][key]
             self.cur_file_data['num_calls'] += 1
@@ -96,11 +110,10 @@ class Tracer(object):
 
         elif event == 'line':
             # Record an executed line.
-            if self.cur_file_data is not None:
-                # TODO
-                pass
-                # self.cur_file_data[frame.f_lineno] = None
-            # self.last_line = frame.f_lineno
+            filename = frame.f_code.co_filename
+            function_name = frame.f_code.co_name
+            key = '%s:%s:%d' % (filename, function_name, frame.f_lineno)
+            self.cur_file_data['calls'][key] = self._get_line_struct(frame)
 
         elif event == 'return':
             # Leaving this function, pop the filename stack.

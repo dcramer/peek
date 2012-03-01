@@ -6,6 +6,8 @@ peek.collector
 :license: Apache License 2.0, see LICENSE for more details.
 """
 
+__all__ = ('Collector',)
+
 import sys
 import threading
 # TODO: handle Python < 2.7

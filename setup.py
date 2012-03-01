@@ -18,7 +18,16 @@ setup(
         'unittest2==2.0.5.1',
     ],
     license='Apache License 2.0',
-    include_package_data=True,
+    package_data={
+        'peek': [
+            'htmlfiles/*.*',
+        ]
+    },
+    entry_points={
+        'console_scripts': [
+            'peek = peek.runner:main',
+        ],
+    },
     classifiers=[
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',

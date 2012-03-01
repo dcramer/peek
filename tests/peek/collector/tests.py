@@ -26,7 +26,7 @@ class CollectorIntegrationTestCase(TestCase):
         data = collector.get_calls()
         self.assertEquals(len(data), 1)
 
-        key = '%s:function_one' % __file__
+        key = '%s:function_one:5' % __file__
         self.assertIn(key, data)
         result = data[key]
 
@@ -43,9 +43,12 @@ class CollectorIntegrationTestCase(TestCase):
 
         self.assertIn('calls', result)
         calls = result['calls']
-        self.assertEquals(len(calls), 1)
+        self.assertEquals(len(calls), 4)
 
-        child_key = '%s:function_two' % __file__
+        import pprint
+        pprint.pprint(calls)
+
+        child_key = '%s:function_two:12' % __file__
         self.assertIn(child_key, calls)
         result = calls[child_key]
 
@@ -62,4 +65,4 @@ class CollectorIntegrationTestCase(TestCase):
 
         self.assertIn('calls', result)
         calls = result['calls']
-        self.assertEquals(len(calls), 0)
+        self.assertEquals(len(calls), 2)
