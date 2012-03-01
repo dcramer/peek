@@ -48,23 +48,23 @@ class Tracer(object):
         f_globals = getattr(frame, 'f_globals', {})
         module_name = f_globals.get('__name__')
         return {
-            "event": "line",
-            "filename": filename,
-            "module": module_name,
-            "function": function_name,
-            "num_calls": 0,
-            "time_spent": 0,
-            "lineno": frame.f_lineno,
-            "calls": OrderedDict(),
+            "e": "line",
+            "f": filename,
+            "m": module_name,
+            "fn": function_name,
+            "n": 0,
+            "t": 0,
+            "l": frame.f_lineno,
+            "c": OrderedDict(),
         }
 
     def _get_line_struct(self, frame):
         return {
-            "event": "line",
-            "num_calls": 0,
-            "time_spent": 0,
-            "lineno": frame.f_lineno,
-            "calls": OrderedDict(),
+            "e": "line",
+            "n": 0,
+            "t": 0,
+            "l": frame.f_lineno,
+            "c": OrderedDict(),
         }
 
     def _trace(self, frame, event, arg_unused):
@@ -82,7 +82,7 @@ class Tracer(object):
                 # Someone forgot a return event.
                 self.cur_file_data, self.last_time = self.data_stack.pop()
                 # TODO: is this correct?
-                self.cur_file_data['time_spent'] += (cur_time - self.last_time)
+                self.cur_file_data['t'] += (cur_time - self.last_time)
 
             self.last_exc_back = None
 
@@ -97,11 +97,11 @@ class Tracer(object):
             function_name = frame.f_code.co_name
             key = '%s:%s:%d' % (filename, function_name, frame.f_lineno)
 
-            if key not in self.cur_file_data['calls']:
-                self.cur_file_data['calls'][key] = self._get_function_struct(frame)
+            if key not in self.cur_file_data['c']:
+                self.cur_file_data['c'][key] = self._get_function_struct(frame)
 
-            self.cur_file_data = self.cur_file_data['calls'][key]
-            self.cur_file_data['num_calls'] += 1
+            self.cur_file_data = self.cur_file_data['c'][key]
+            self.cur_file_data['n'] += 1
 
             # TODO: do we need this
             # Set the last_line to -1 because the next arc will be entering a
@@ -113,12 +113,12 @@ class Tracer(object):
             filename = frame.f_code.co_filename
             function_name = frame.f_code.co_name
             key = '%s:%s:%d' % (filename, function_name, frame.f_lineno)
-            self.cur_file_data['calls'][key] = self._get_line_struct(frame)
+            self.cur_file_data['c'][key] = self._get_line_struct(frame)
 
         elif event == 'return':
             # Leaving this function, pop the filename stack.
             if self.cur_file_data:
-                self.cur_file_data['time_spent'] += (cur_time - self.last_time)
+                self.cur_file_data['t'] += (cur_time - self.last_time)
             self.cur_file_data, self.last_time = self.data_stack.pop()
 
         elif event == 'exception':

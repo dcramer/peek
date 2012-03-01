@@ -29,43 +29,62 @@
 
         this.renderRow = function($el, parent, data){
             var $parent = $('<table></table>');
-            $el.append($parent);
+            var had_any = false;
             $.each(data, function(key, value){
-                if (parent) {
-                    var label = (self.source[parent.filename][value.lineno - parent.lineno] || value.function);
-                } else {
-                    var label = self.source[value.filename][value.lineno];
+                had_any = true;
+                var label = self.source[value.f || parent.f][value.l];
+                if (label == '') {
+                    label = '&nbsp;';
                 }
-                var timing = ((Math.round((value.time_spent / value.num_calls) * 1000, 5) / 1000) || 0);
-                var $row = $('<tr><td>' + timing + 's</td><td>' + value.lineno + '</td><td><pre>' + label + '</pre></tr>');
+                var timing = ((Math.round((value.t / value.n) * 1000, 5) / 1000) || 0);
+                var $row = $('<tr><td class="t">' + timing + 's</td><td class="l">' + value.l + '</td><td class="c"><pre>' + label + '</pre></tr>');
                 $parent.append($row);
 
-                if (value.calls) {
-                    self.renderRow($row.find('td:last-child'), value, value.calls);
-                }
+                self.renderRow($row.find('td:last-child'), value, value.c);
             });
+            if (had_any) {
+                $el.append($parent);
+            }
         };
 
         return this;
     })();
     </script>
     <style type="text/css">
+    body {
+        font-size: 11px;
+    }
     * {
+        line-height: 15px;
         padding: 0;
         margin: 0;
     }
     li {
         margin-left: 10px;
     }
-    td, pre {
-        font-family: monaco, fixed;
-        font-size: 1em;
-    }
     pre {
+        font-family: monaco, fixed;
+        font-size: inherit;
         padding: 0;
     }
-    td { vertical-align: top; }
-
+    table {
+        border-left: 1px solid #ddd;
+        border-spacing: collapse;
+    }
+    td {
+        padding: 0 2px;
+        background: #fff;
+        vertical-align: top;
+        font-family: monaco, fixed;
+    }
+    td.t, td.l {
+        padding-right: 10px;
+        text-align: right;
+    }
+    td.c {
+        color: #555;
+        text-align: left;
+    }
     </style>
   </head>
   <body>

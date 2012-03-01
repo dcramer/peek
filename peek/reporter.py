@@ -8,7 +8,6 @@ peek.reporter
 
 __all__ = ('Reporter',)
 
-import inspect
 import json
 import os.path
 
@@ -43,16 +42,16 @@ class HTMLReporter(Reporter):
                 return {key: value}
 
         for key, value in data.iteritems():
-            return self._get_origin(value['calls'], origin)
+            return self._get_origin(value['c'], origin)
 
     def get_files(self, calls, files=None):
         if files is None:
             files = set()
         for key, value in calls.iteritems():
-            if 'filename' in value:
-                files.add(value['filename'])
-            if 'calls' in value:
-                self.get_files(value['calls'], files)
+            if 'f' in value:
+                files.add(value['f'])
+            if 'c' in value:
+                self.get_files(value['c'], files)
         return files
 
     def report(self):
@@ -60,7 +59,7 @@ class HTMLReporter(Reporter):
 
         files = self.get_files(calls)
 
-        source = dict((f, list(open(f, 'r'))) for f in files)
+        source = dict((f, [f.strip() for f in open(f, 'r')]) for f in files)
 
         data = {
             'calls': calls,

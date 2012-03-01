@@ -30,19 +30,19 @@ class CollectorIntegrationTestCase(TestCase):
         self.assertIn(key, data)
         result = data[key]
 
-        self.assertIn('filename', result)
-        self.assertEquals(result['filename'], __file__)
-        self.assertIn('module', result)
-        self.assertEquals(result['module'], __name__)
-        self.assertIn('function', result)
-        self.assertEquals(result['function'], 'function_one')
-        self.assertIn('num_calls', result)
-        self.assertEquals(result['num_calls'], 1)
-        self.assertIn('time_spent', result)
-        self.assertGreater(result['time_spent'], 0)
+        self.assertIn('f', result)
+        self.assertEquals(result['f'], __file__)
+        self.assertIn('m', result)
+        self.assertEquals(result['m'], __name__)
+        self.assertIn('fn', result)
+        self.assertEquals(result['fn'], 'function_one')
+        self.assertIn('n', result)
+        self.assertEquals(result['n'], 1)
+        self.assertIn('t', result)
+        self.assertGreater(result['t'], 0)
 
-        self.assertIn('calls', result)
-        calls = result['calls']
+        self.assertIn('c', result)
+        calls = result['c']
         self.assertEquals(len(calls), 4)
 
         import pprint
@@ -52,17 +52,17 @@ class CollectorIntegrationTestCase(TestCase):
         self.assertIn(child_key, calls)
         result = calls[child_key]
 
-        self.assertIn('filename', result)
-        self.assertEquals(result['filename'], __file__)
-        self.assertIn('module', result)
-        self.assertEquals(result['module'], __name__)
-        self.assertIn('function', result)
-        self.assertEquals(result['function'], 'function_two')
-        self.assertIn('num_calls', result)
-        self.assertEquals(result['num_calls'], 1)
-        self.assertIn('time_spent', result)
-        self.assertGreater(result['time_spent'], 0)
+        self.assertIn('f', result)
+        self.assertEquals(result['f'], __file__)
+        self.assertIn('m', result)
+        self.assertEquals(result['m'], __name__)
+        self.assertIn('fn', result)
+        self.assertEquals(result['fn'], 'function_two')
+        self.assertIn('n', result)
+        self.assertEquals(result['n'], 1)
+        self.assertIn('t', result)
+        self.assertGreater(result['t'], 0)
 
-        self.assertIn('calls', result)
-        calls = result['calls']
+        self.assertIn('c', result)
+        calls = result['c']
         self.assertEquals(len(calls), 2)

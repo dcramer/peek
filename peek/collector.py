@@ -56,10 +56,12 @@ class Collector(object):
         """
         # A dictionary mapping filenames to dicts with linenumber keys,
         # or mapping filenames to dicts with linenumber pairs as keys.
+
+        # TODO: this is duplicated in the tracer to some extent
         self.data = {
-            "num_calls": 0,
-            "time_spent": 0,
-            "calls": OrderedDict(),
+            "n": 0,
+            "c": 0,
+            "c": OrderedDict(),
         }
 
         # Our active Tracers.
@@ -126,4 +128,4 @@ class Collector(object):
     def get_calls(self):
         # the first key should be our trace, lets ignore it
         # the last key should be our stop call, lets ignore it
-        return dict((k, v) for k, v in self.data['calls'].items()[1:-1])
+        return dict((k, v) for k, v in self.data['c'].items()[1:-1])
