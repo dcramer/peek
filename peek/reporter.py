@@ -59,7 +59,7 @@ class HTMLReporter(Reporter):
 
         files = self.get_files(calls)
 
-        source = dict((f, [f.strip() for f in open(f, 'r')]) for f in files)
+        source = dict((f, [f[:-1] for f in open(f, 'r')]) for f in files)
 
         data = {
             'calls': calls,
