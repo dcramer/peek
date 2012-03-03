@@ -2,6 +2,17 @@ from unittest2 import TestCase
 from peek.collector import Collector
 
 
+def collect():
+    collector = Collector()
+    collector.start()
+
+    function_one(' world')
+
+    collector.stop()
+
+    return collector
+
+
 def function_one(arg):
     # a comment
     foo = arg
@@ -16,53 +27,46 @@ def function_two(foo, bar):
 
 class CollectorIntegrationTestCase(TestCase):
     def test_does_trace(self):
-        collector = Collector()
-        collector.start()
+        collector = collect()
 
-        function_one(' world')
+        data = collector.get_results()
+        self.assertGreater(len(data), 0)
 
-        collector.stop()
-
-        data = collector.get_calls()
-        self.assertEquals(len(data), 1)
-
-        key = '%s:function_one:5' % __file__
+        key = 9
         self.assertIn(key, data)
         result = data[key]
 
-        self.assertIn('f', result)
-        self.assertEquals(result['f'], __file__)
-        self.assertIn('m', result)
-        self.assertEquals(result['m'], __name__)
-        self.assertIn('fn', result)
-        self.assertEquals(result['fn'], 'function_one')
-        self.assertIn('n', result)
-        self.assertEquals(result['n'], 1)
-        self.assertIn('t', result)
-        self.assertGreater(result['t'], 0)
+        self.assertIn('filename', result)
+        self.assertEquals(result['filename'], __file__)
+        self.assertIn('module', result)
+        self.assertEquals(result['module'], __name__)
+        self.assertIn('function', result)
+        self.assertEquals(result['function'], 'function_one')
+        self.assertIn('num_calls', result)
+        self.assertEquals(result['num_calls'], 1)
+        self.assertIn('time_spent', result)
+        self.assertGreater(result['time_spent'], 0)
 
-        self.assertIn('c', result)
-        calls = result['c']
-        self.assertEquals(len(calls), 4)
+        self.assertIn('children', result)
+        calls = result['children']
+        self.assertEquals(len(calls), 5, calls.keys())
 
-        import pprint
-        pprint.pprint(calls)
-
-        child_key = '%s:function_two:12' % __file__
+        child_key = 20
         self.assertIn(child_key, calls)
         result = calls[child_key]
 
-        self.assertIn('f', result)
-        self.assertEquals(result['f'], __file__)
-        self.assertIn('m', result)
-        self.assertEquals(result['m'], __name__)
-        self.assertIn('fn', result)
-        self.assertEquals(result['fn'], 'function_two')
-        self.assertIn('n', result)
-        self.assertEquals(result['n'], 1)
-        self.assertIn('t', result)
-        self.assertGreater(result['t'], 0)
+        self.assertIn('filename', result)
+        self.assertEquals(result['filename'], __file__)
+        self.assertIn('module', result)
+        self.assertEquals(result['module'], __name__)
+        self.assertIn('function', result)
+        self.assertEquals(result['function'], 'function_two')
+        self.assertIn('num_calls', result)
+        self.assertEquals(result['num_calls'], 1)
+        self.assertIn('time_spent', result)
+        self.assertGreater(result['time_spent'], 0)
 
-        self.assertIn('c', result)
-        calls = result['c']
-        self.assertEquals(len(calls), 2)
+        self.assertIn('children', result)
+        calls = result['children']
+        self.assertEquals(len(calls), 3, calls.keys())
+

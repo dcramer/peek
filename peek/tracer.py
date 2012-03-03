@@ -2,8 +2,78 @@
 peek.tracer
 ~~~~~~~~~~~
 
+This code is complicated as shit, but it basically recurses and captures
+execution times in a tree. Below you'll find an example output structure
+with expanded variable names.
 
 Code is inspired and originally based on ``coverage.py``.
+
+::
+
+    {
+        "filename": "my_test.py",
+
+        "event": "call",
+
+        # module and function are optional
+        "module": "my.test",
+        "function": "main",
+        "lineno": 0,
+
+        "num_calls": 0,  # same as len(calls)
+        "time_spent": 0,
+
+        "children": [
+            {
+                "event": "line",
+                "source": "def main():",
+
+                "num_calls": 0,
+                "time_spent": 0,
+            },
+            {
+                "event": "call",
+                "source": "    __import__('foo')",
+
+                "filename": "builtins_or_some_shit.py",
+                "module": "__builtin__",
+                "function": "__import__",
+                "lineno": 5,
+
+                "caller": {
+                    "lineno": 5,
+                }
+
+                "num_calls": 0,
+                "time_spent": 0,
+
+                "children": [
+                    {
+                        "event": "line",
+                        "source": "def __import__(foo):",
+
+                        "num_calls": 0,
+                        "time_spent": 0,
+                    },
+                    {
+                        "event": "line",
+                        "source": "    return sys.modules[foo]",
+
+                        "num_calls": 0,
+                        "time_spent": 0,
+                    },
+                ],
+            },
+            {
+                "event": "return",
+                "source": "    return True",
+
+                "num_calls": 0,
+                "time_spent": 0,
+            },
+        ],
+    }
+
 
 :copyright: 2012 DISQUS.
 :license: Apache License 2.0, see LICENSE for more details.
@@ -11,59 +81,71 @@ Code is inspired and originally based on ``coverage.py``.
 
 __all__ = ('Tracer',)
 
+from collections import defaultdict
 import inspect
 import sys
 import time
-from collections import OrderedDict
 
 
 class Tracer(object):
     """
     A tracer which records timing information for every executed line.
 
-    Statistics generated from the Tracer resemble the following:
-
-    OrderedDict([("filename:function_name", {
-        "filename": "filename",
-        "module": "module.name",
-        "function": "function_name',
-        "num_calls": 0,
-        "time_spent": 0,
-        "calls": OrderedDict([
-            # recursive input same as root
-        ])
-    })])
+    This code is complicated as hell because it has to determine where
+    the origin is so it records the tree correctly.
     """
     def __init__(self, logger=None):
-        self.cur_file_data = None
-        self.last_time = 0
+        self.data = None
+        self.depth = 0
+        self.pause_until = None
         self.data_stack = []
         self.last_exc_back = None
         self.last_exc_firstlineno = 0
         self.logger = logger
 
-    def _get_struct(self, frame):
+    def _get_struct(self, frame, event):
         filename = inspect.getfile(frame)
         function_name = frame.f_code.co_name
         f_globals = getattr(frame, 'f_globals', {})
         module_name = f_globals.get('__name__')
-        return {
-            "f": filename,
-            "m": module_name,
-            "fn": function_name,
-            "n": 0,
-            "t": 0,
-            "l": frame.f_lineno,
-            "c": OrderedDict([
-                ("%s:%d" % (filename, n), {
-                    "s": l[:-1],
-                    "n": 0,
-                    "t": 0,
-                    "l": n,
-                    "c": OrderedDict(),
-                }) for n, l in enumerate(*inspect.getsourcelines(frame))
-            ]),
+
+        source, lineno = inspect.getsourcelines(frame)
+
+        pre_frame = frame.f_back
+
+        result = {
+            "event": event,
+
+            "filename": filename,
+            "module": module_name,
+            "function": function_name,
+
+            "num_calls": 0,
+            "time_spent": 0,
+
+            "lineno": frame.f_lineno,
+
+            "lines": dict(
+                (num, {
+                    "num_calls": 0,
+                    "time_spent": 0,
+                    "source": code[:-1],
+                })
+                for num, code in enumerate(source, lineno)
+            ),
+
+            "children": defaultdict(dict),
+            # lineno: {
+            #     function_name: struct
+            # }
         }
+
+        if pre_frame:
+            result["caller"] = {
+                "lineno": pre_frame.f_lineno,
+            }
+
+        return result
 
     def _trace(self, frame, event, arg_unused):
         """
@@ -71,53 +153,70 @@ class Tracer(object):
         """
         cur_time = time.time()
 
+        lineno = frame.f_lineno
+        depth = self.depth
+
         if self.logger:
+            # self.logger.debug'%s:%s, line %d, %d calls' % (call.get('filename'), call.get('function'), call['lineno'], call['num_calls'])
+
             self.logger.debug("trace event: %s %r @%d" % (
                   event, frame.f_code.co_filename, frame.f_lineno))
 
         if self.last_exc_back:
             if frame == self.last_exc_back:
-                # Someone forgot a return event.
-                self.cur_file_data, self.last_time = self.data_stack.pop()
-                # TODO: is this correct?
-                self.cur_file_data['t'] += (cur_time - self.last_time)
+                self.data['time_spent'] += (cur_time - self.start_time)
+                self.depth -= 1
+
+                self.data = self.data_stack.pop()
 
             self.last_exc_back = None
 
         if event == 'call':
-            # Entering a new function context.  Decide if we should trace
-            # in this file.
+            # Update our state
+            self.depth += 1
+
+            # origin line number (where it was called from)
+            o_lineno = frame.f_back.f_lineno
+
+            if self.pause_until is not None:
+                if depth == self.pause_until:
+                    self.pause_until = None
+                else:
+                    return self._trace
+
+            if o_lineno not in self.data['lines']:
+                self.pause_until = depth
+
+                return self._trace
 
             # Append it to the stack
-            self.data_stack.append((self.cur_file_data, cur_time))
+            self.data_stack.append(self.data)
 
-            filename = inspect.getfile(frame)
-            key = '%s:%d' % (filename, frame.f_lineno)
+            call_sig = '%s:%s' % (inspect.getfile(frame), frame.f_code.co_name)
 
-            if key not in self.cur_file_data['c']:
-                self.cur_file_data['c'][key] = self._get_struct(frame)
+            if call_sig not in self.data['children']:
+                self.data['children'][o_lineno][call_sig] = self._get_struct(frame, event)
 
-            self.cur_file_data = self.cur_file_data['c'][key]
-            self.cur_file_data['n'] += 1
+            self.data = self.data['children'][o_lineno][call_sig]
 
-            # TODO: do we need this
-            # Set the last_line to -1 because the next arc will be entering a
-            # code block, indicated by (-1, n).
-            # self.last_line = -1
+            self.data['num_calls'] += 1
 
         elif event == 'line':
             # Record an executed line.
-            pass
-            # filename = frame.f_code.co_filename
-            # function_name = frame.f_code.co_name
-            # key = '%s:%s:%d' % (filename, function_name, frame.f_lineno)
-            # self.cur_file_data['c'][key] = self._get_line_struct(frame)
+            if self.pause_until is None and lineno in self.data['lines']:
+                self.data['lines'][lineno]['num_calls'] += 1
+                self.data['lines'][lineno]['time_spent'] += (cur_time - self.start_time)
 
         elif event == 'return':
             # Leaving this function, pop the filename stack.
-            if self.cur_file_data:
-                self.cur_file_data['t'] += (cur_time - self.last_time)
-            self.cur_file_data, self.last_time = self.data_stack.pop()
+            if self.pause_until is None:
+                self.data['time_spent'] += (cur_time - self.start_time)
+                self.data = self.data_stack.pop()
+                self.data['time_spent'] += (cur_time - self.start_time)
+                # self.data['lines'][lineno]['num_calls'] += 1
+                # self.data['lines'][lineno]['time_spent'] += (cur_time - self.start_time)
+
+            self.depth -= 1
 
         elif event == 'exception':
             self.last_exc_back = frame.f_back
@@ -125,12 +224,16 @@ class Tracer(object):
 
         return self._trace
 
-    def start(self):
+    def start(self, origin):
         """
         Start this Tracer.
 
         Return a Python function suitable for use with sys.settrace().
         """
+        self.start_time = time.time()
+        self.pause_until = None
+        self.data.update(self._get_struct(origin, 'origin'))
+        self.data_stack.append(self.data)
         sys.settrace(self._trace)
         return self._trace
 
@@ -143,9 +246,3 @@ class Tracer(object):
                 msg = "Trace function changed, measurement is likely wrong: %r"
                 self.logger.warn(msg % sys.gettrace())
         sys.settrace(None)
-
-    def get_stats(self):
-        """
-        Return a dictionary of statistics, or None.
-        """
-        return None

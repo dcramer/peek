@@ -21,28 +21,36 @@
             $results.empty();
 
             self.renderRow($results, null, data);
+            // $.each(data, function(lineno, chunk){
+            //     self.renderRow($results, null, chunk);
+            // });
 
             // $results.Treeview({ speed: "fast", collapsed: true, control: "#treecontrol" });
         };
 
         this.renderRow = function($el, parent, data){
+            console.log(data);
+
+            if (data.lines.length === 0) return;
+
             var $parent = $('<table></table>');
-            var had_any = false;
-            $.each(data, function(key, value){
-                had_any = true;
-                var label = value.s;
-                if (label == '') {
-                    label = '&nbsp;';
-                }
-                var timing = ((Math.round((value.t / value.n) * 1000, 5) / 1000) || 0);
-                var $row = $('<tr><td class="t">' + timing + 's</td><td class="l">' + value.l + '</td><td class="c"><pre>' + label + '</pre></tr>');
+            $.each(data.lines, function(lineno, line){
+                var label = line.source || '&nbsp;';
+                var children = data.children[lineno] || {};
+                var timing = Math.round(line.time_spent * 1000, 3) / 1000;
+                var $row = $('<tr><td class="t">' + timing + 's</td><td class="n">' + line.num_calls + '</td><td class="l">' + lineno + '</td><td class="c"><pre>' + label + '</pre></tr>');
+                // var timing = ((Math.round((value.time_spent / value.num_calls) * 1000, 5) / 1000) || 0);
+                // var $row = $('<tr><td class="t">' + timing + 's</td><td class="n">' + value.num_calls + '</td><td class="l">' + value.lineno + '</td><td class="c"><pre>' + label + '</pre></tr>');
+
+                var $rowc = $($row.find('td.c').get());
+                $.each(children, function(call_sig, child){
+                    self.renderRow($rowc, data, child);
+                });
+
                 $parent.append($row);
 
-                self.renderRow($row.find('td:last-child'), value, value.c);
             });
-            if (had_any) {
-                $el.append($parent);
-            }
+            $el.append($parent);
         };
 
         return this;
@@ -56,9 +64,6 @@
         line-height: 15px;
         padding: 0;
         margin: 0;
-    }
-    li {
-        margin-left: 10px;
     }
     pre {
         font-family: monaco, fixed;
@@ -75,7 +80,7 @@
         vertical-align: top;
         font-family: monaco, fixed;
     }
-    td.t, td.l {
+    td.t, td.l, td.n {
         padding-right: 10px;
         text-align: right;
     }
@@ -83,7 +88,10 @@
         color: #555;
         text-align: left;
     }
-    </style>
+/*    .c table table table table {
+        display: none;
+    }
+*/    </style>
   </head>
   <body>
     <ol id="results"></ol>

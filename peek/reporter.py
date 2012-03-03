@@ -9,6 +9,7 @@ peek.reporter
 __all__ = ('Reporter',)
 
 import json
+import os
 import os.path
 
 
@@ -18,7 +19,7 @@ class Reporter(object):
         self.collector = collector
 
         if output is None:
-            output = 'peekhtml'
+            output = os.path.join(os.getcwd(), 'peekhtml')
 
         self.output = os.path.normpath(output)
 
@@ -33,16 +34,16 @@ class HTMLReporter(Reporter):
     This actually just dumps some JSON to a file, which a static HTML page will
     pull in and render.
     """
-    def _get_origin(self, data, origin):
-        if origin in data:
-            return {origin: data[origin]}
+    # def _get_origin(self, data, origin):
+    #     if origin in data:
+    #         return {origin: data[origin]}
 
-        for key, value in data.iteritems():
-            if key.startswith(origin):
-                return {key: value}
+    #     for key, value in data.iteritems():
+    #         if key.startswith(origin):
+    #             return {key: value}
 
-        for key, value in data.iteritems():
-            return self._get_origin(value['c'], origin)
+    #     for key, value in data.iteritems():
+    #         return self._get_origin(value['children'], origin)
 
     # def get_files(self, calls, files=None):
     #     if files is None:
@@ -55,10 +56,11 @@ class HTMLReporter(Reporter):
     #     return files
 
     def report(self):
-        calls = self._get_origin(self.collector.get_calls(), self.origin)
+        results = self.collector.get_results()
+        # calls = self._get_origin(self.collector.get_results(), self.origin)
 
         if not os.path.exists(self.output):
             os.makedirs(self.output)
 
         with open(os.path.join(self.output, 'data.json'), 'w') as fp:
-            fp.write('Peek.load(' + json.dumps(calls) + ');')
+            fp.write('Peek.load(' + json.dumps(results) + ');')
