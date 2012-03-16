@@ -188,7 +188,7 @@ class Tracer(object):
             self.depth += 1
 
             if self.log:
-                print >> sys.stdout, '[%s] >> %s:%s' % (depth - 1, filename, frame.f_code.co_name)
+                print >> sys.stdout, '%s >> %s:%s' % (' ' * (depth - 1), filename, frame.f_code.co_name)
 
             # origin line number (where it was called from)
             o_lineno = frame.f_back.f_lineno
@@ -222,6 +222,9 @@ class Tracer(object):
                 self.data['lines'][lineno]['num_calls'] += 1
                 self.data['lines'][lineno]['time_spent'] += (cur_time - self.start_time)
 
+            if self.log:
+                print >> sys.stdout, '%s -- %s:%s executing line %d' % (' ' * (depth - 1), filename, frame.f_code.co_name, lineno)
+
         elif event == 'return':
             timing = (cur_time - self.start_time)
 
@@ -234,7 +237,7 @@ class Tracer(object):
                 # self.data['lines'][lineno]['time_spent'] += (cur_time - self.start_time)
 
             if self.log:
-                print >> sys.stdout, '[%s] << %s:%s %.3fs' % (depth - 1, filename, frame.f_code.co_name, timing)
+                print >> sys.stdout, '%s << %s:%s %.3fs' % (' ' * (depth - 1), filename, frame.f_code.co_name, timing)
 
             self.depth -= 1
 
