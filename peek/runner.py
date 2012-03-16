@@ -94,22 +94,44 @@ def run_python_file(filename, args, package=None, collector=None):
 
 
 def main(argv=None):
+    from optparse import OptionParser
+
     if argv is None:
         argv = sys.argv[1:]
 
-    from peek.collector import Collector
-    from peek.reporter import HTMLReporter
+    usage = "python -m peek [-o output_file_path] scriptfile [arg] ..."
+    parser = OptionParser(usage=usage)
+    parser.allow_interspersed_args = False
+    parser.add_option('-o', '--output', dest="output",
+        help="Save stats to <outfile> directory", default=None)
 
-    collector = Collector()
-    collector.start()
+    if not argv:
+        parser.print_usage()
+        sys.exit(2)
 
-    try:
-        run_python_file(argv[0], argv)
-    finally:
-        collector.stop()
+    (options, args) = parser.parse_args()
+    sys.argv[:] = args
 
-        reporter = HTMLReporter(argv[0], collector)
-        reporter.report()
+    if len(args) > 0:
+        progname = args[0]
+        sys.path.insert(0, os.path.dirname(progname))
+
+        from peek.collector import Collector
+        from peek.reporter import HTMLReporter
+
+        collector = Collector(log=(not options.output))
+        collector.start()
+
+        try:
+            run_python_file(progname, args)
+        finally:
+            collector.stop()
+
+            reporter = HTMLReporter(progname, collector, output=options.output)
+            reporter.report()
+
+    else:
+        parser.print_usage()
 
 
 if __name__ == '__main__':

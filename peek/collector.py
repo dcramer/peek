@@ -15,15 +15,15 @@ from peek.tracer import Tracer
 
 
 class Collector(object):
-    def __init__(self, logger=None, tracer=Tracer):
+    def __init__(self, log=False, tracer=Tracer):
         self._tracer_class = Tracer
-        self.logger = logger
+        self.log = log
 
     def _start_tracer(self, origin):
         """
         Start a new Tracer object, and store it in self.tracers.
         """
-        tracer = self._tracer_class(logger=self.logger)
+        tracer = self._tracer_class(log=self.log)
         tracer.data = self.data
         fn = tracer.start(origin)
         self.tracers.append(tracer)

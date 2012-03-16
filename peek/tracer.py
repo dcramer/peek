@@ -94,14 +94,14 @@ class Tracer(object):
     This code is complicated as hell because it has to determine where
     the origin is so it records the tree correctly.
     """
-    def __init__(self, logger=None):
+    def __init__(self, log=False):
         self.data = None
         self.depth = 0
         self.pause_until = None
         self.data_stack = []
         self.last_exc_back = None
         self.last_exc_firstlineno = 0
-        self.logger = logger
+        self.log = log
 
     def _get_struct(self, frame, event):
         filename = inspect.getfile(frame)
@@ -156,11 +156,20 @@ class Tracer(object):
         lineno = frame.f_lineno
         depth = self.depth
 
-        if self.logger:
-            # self.logger.debug'%s:%s, line %d, %d calls' % (call.get('filename'), call.get('function'), call['lineno'], call['num_calls'])
+        f_globals = getattr(frame, 'f_globals', {})
+        module_name = f_globals.get('__name__')
 
-            self.logger.debug("trace event: %s %r @%d" % (
-                  event, frame.f_code.co_filename, frame.f_lineno))
+        try:
+            base_filename = sys.modules[module_name.split('.', 1)[0]].__file__
+            if base_filename.endswith('__init__.py') or base_filename.endswith('__init__.pyc'):
+                filename = '/'.join(base_filename.rsplit('/', 2)[1:])
+            else:
+                filename = '/'.join(base_filename.rsplit('/', 1)[1:])
+        except:
+            filename = inspect.getfile(frame)
+        else:
+            if not filename:
+                filename = filename = inspect.getfile(frame)
 
         if self.last_exc_back:
             if frame == self.last_exc_back:
@@ -200,6 +209,9 @@ class Tracer(object):
             self.data = self.data['children'][o_lineno][call_sig]
 
             self.data['num_calls'] += 1
+
+            if self.log:
+                print >> sys.stdout, '%s %s:%s' % (' -' * (depth - 1), filename, frame.f_code.co_name)
 
         elif event == 'line':
             # Record an executed line.
@@ -241,8 +253,8 @@ class Tracer(object):
         """
         Stop this Tracer.
         """
-        if hasattr(sys, "gettrace") and self.logger:
+        if hasattr(sys, "gettrace") and self.log:
             if sys.gettrace() != self._trace:
                 msg = "Trace function changed, measurement is likely wrong: %r"
-                self.logger.warn(msg % sys.gettrace())
+                print >> sys.stdout, msg % sys.gettrace()
         sys.settrace(None)
