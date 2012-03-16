@@ -95,7 +95,7 @@ class Tracer(object):
     the origin is so it records the tree correctly.
     """
     def __init__(self, log=False):
-        self.data = None
+        self.data = {}
         self.depth = 0
         self.pause_until = None
         self.data_stack = []
@@ -214,7 +214,7 @@ class Tracer(object):
             self.data['num_calls'] += 1
 
             if self.log:
-                print >> sys.stdout, '%s %s:%s' % (' -' * (depth - 1), filename, frame.f_code.co_name)
+                print >> sys.stdout, '[%s] >> %s:%s' % (depth - 1, filename, frame.f_code.co_name)
 
         elif event == 'line':
             # Record an executed line.
@@ -223,13 +223,18 @@ class Tracer(object):
                 self.data['lines'][lineno]['time_spent'] += (cur_time - self.start_time)
 
         elif event == 'return':
+            timing = (cur_time - self.start_time)
+
             # Leaving this function, pop the filename stack.
             if self.pause_until is None:
-                self.data['time_spent'] += (cur_time - self.start_time)
+                self.data['time_spent'] += timing
                 self.data = self.data_stack.pop()
-                self.data['time_spent'] += (cur_time - self.start_time)
+                self.data['time_spent'] += timing
                 # self.data['lines'][lineno]['num_calls'] += 1
                 # self.data['lines'][lineno]['time_spent'] += (cur_time - self.start_time)
+
+            if self.log:
+                print >> sys.stdout, '[%s] << %s:%s %.3fs' % (depth - 1, filename, frame.f_code.co_name, timing)
 
             self.depth -= 1
 
