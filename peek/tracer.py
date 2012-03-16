@@ -159,20 +159,7 @@ class Tracer(object):
         lineno = frame.f_lineno
         depth = self.depth
 
-        f_globals = getattr(frame, 'f_globals', {})
-        module_name = f_globals.get('__name__')
-
-        try:
-            base_filename = sys.modules[module_name.split('.', 1)[0]].__file__
-            if base_filename.endswith('__init__.py') or base_filename.endswith('__init__.pyc'):
-                filename = '/'.join(base_filename.rsplit('/', 2)[1:])
-            else:
-                filename = '/'.join(base_filename.rsplit('/', 1)[1:])
-        except:
-            filename = inspect.getfile(frame)
-        else:
-            if not filename:
-                filename = filename = inspect.getfile(frame)
+        filename = inspect.getfile(frame)
 
         if self.last_exc_back:
             if frame == self.last_exc_back:
