@@ -187,6 +187,9 @@ class Tracer(object):
             # Update our state
             self.depth += 1
 
+            if self.log:
+                print >> sys.stdout, '[%s] >> %s:%s' % (depth - 1, filename, frame.f_code.co_name)
+
             # origin line number (where it was called from)
             o_lineno = frame.f_back.f_lineno
 
@@ -212,9 +215,6 @@ class Tracer(object):
             self.data = self.data['children'][o_lineno][call_sig]
 
             self.data['num_calls'] += 1
-
-            if self.log:
-                print >> sys.stdout, '[%s] >> %s:%s' % (depth - 1, filename, frame.f_code.co_name)
 
         elif event == 'line':
             # Record an executed line.
