@@ -109,7 +109,10 @@ class Tracer(object):
         f_globals = getattr(frame, 'f_globals', {})
         module_name = f_globals.get('__name__')
 
-        source, lineno = inspect.getsourcelines(frame)
+        try:
+            source, lineno = inspect.getsourcelines(frame)
+        except IOError:
+            source, lineno = [], 0
 
         pre_frame = frame.f_back
 
